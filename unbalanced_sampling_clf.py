@@ -27,7 +27,7 @@ class UnbalancedSamplingClf(BaseEstimator,ClassifierMixin):
 			     majority_to_minority_ratio=1, 
 			     iterations=50,
 			     cutoff = 0.5,
-			     prediction='label',
+			     prediction='labels',
 			     random_state=0):
 
 		self.base_estimator = base_estimator
@@ -56,7 +56,7 @@ class UnbalancedSamplingClf(BaseEstimator,ClassifierMixin):
 		n_ones = len(ones_indeces)
 		zeros_indeces = np.where(y==0)[0]
 		ones_X, ones_y = X[ones_indeces], y[ones_indeces]
-		zeroes_X, zeroes_y = X[ones_indeces], y[ones_indeces]
+		zeroes_X, zeroes_y = X[zeros_indeces], y[zeros_indeces]
 
 		for iteration in range(self.iterations):
 
@@ -95,7 +95,7 @@ class UnbalancedSamplingClf(BaseEstimator,ClassifierMixin):
 		Returns:
 		y_pred: an array of predicted classes for the target variable'''
 		
-		if self.prediction == 'label':
+		if self.prediction == 'labels':
 
 			predictions = np.array([list(base_estimator.predict(X)) for base_estimator in self.model_stack])
 
@@ -103,7 +103,10 @@ class UnbalancedSamplingClf(BaseEstimator,ClassifierMixin):
 
 			predictions = np.array([list(base_estimator.predict_proba(X)[:,1]) for base_estimator in self.model_stack])
 
-		
+		y_pred_proba = predictions.mean(axis=0)
+
+		return np.where(y_pred_proba > self.cutoff, 1, 0)
+
 	
 	def predict_proba(self,X):
 
@@ -114,4 +117,12 @@ class UnbalancedSamplingClf(BaseEstimator,ClassifierMixin):
 		Returns:
 		y_pred: an array of predicted probabilities for the target variable'''
 
-		pass
+		if self.prediction == 'labels':
+
+			predictions = np.array([list(base_estimator.predict(X)) for base_estimator in self.model_stack])
+
+		if self.prediction == 'probabilities':
+
+			predictions = np.array([list(base_estimator.predict_proba(X)[:,1]) for base_estimator in self.model_stack])
+
+		return predictions.mean(axis=0)
